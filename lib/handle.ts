@@ -1,17 +1,3 @@
-// export const handler = async ({ memo }: { memo: string }): Promise<void> => {
-//   // console.log(memo);
-
-//   // return Promise.resolve();
-//   try {
-//     const response = await fetch(
-//       "https://api.neatlist.co/api/v1/account/archive-time"
-//     );
-
-//     console.log(response);
-//   } catch (error) {
-//     console.error("Error fetching archive time:", error);
-//   }
-// };
 import * as dotenv from "dotenv";
 import mongoose, { Connection, Schema, Model, Document } from "mongoose";
 
@@ -194,6 +180,42 @@ export const deleteItem = async (
 };
 
 export const updateItem = async (
+  event: APIGatewayEvent,
+  context: Context
+): Promise<APIGatewayResponse> => {
+  context.callbackWaitsForEmptyEventLoop = false;
+
+  try {
+    if (!event.pathParameters?.id) {
+      return createResponse(400, { message: "Missing item ID" });
+    }
+
+    conn = await waitDB(conn);
+    const data = JSON.parse(event.body);
+
+    const itemObject: Omit<IItem, keyof Document> = {
+      name: data.name,
+      cost: data.cost,
+    };
+
+    const ItemModel = conn.model<IItem>("Item");
+    const _id = event.pathParameters.id;
+
+    const updatedItem = await ItemModel.findByIdAndUpdate(_id, itemObject, {
+      new: true,
+    });
+
+    if (!updatedItem) {
+      return createResponse(404, { message: "Item not found" });
+    }
+
+    return createResponse(200, { message: "Item updated", item: updatedItem });
+  } catch (error) {
+    console.error("Error updating item:", error);
+    return createResponse(500, { message: "Internal Server error" });
+  }
+};
+export const closingPosts = async (
   event: APIGatewayEvent,
   context: Context
 ): Promise<APIGatewayResponse> => {
